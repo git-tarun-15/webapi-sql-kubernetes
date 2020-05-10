@@ -15,13 +15,7 @@ spec:
       terminationGracePeriodSeconds: 10
       containers:
       - name: mssql
-        image: mcr.microsoft.com/mssql/server:2017-latest
-        resources:
-          limits:
-            cpu: "2"
-            memory: "2Gi"
-          requests:
-            cpu: "0.5"
+        image: mcr.microsoft.com/mssql/server:2017-latest          
         ports:
         - containerPort: 1433
         env:
@@ -85,3 +79,27 @@ spec:
     port: 80 
     targetPort: 80 
   type: LoadBalancer 
+
+---
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: azure-disk
+provisioner: kubernetes.io/azure-disk
+parameters:
+  storageaccounttype: Standard_LRS
+  kind: Managed
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mssql-pvc
+  annotations: 
+    volume.beta.kubernetes.io/storage-class: azure-disk
+spec:
+  storageClassName: default
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi  
