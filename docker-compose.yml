@@ -1,0 +1,19 @@
+version: "3"
+services:
+    
+    db-server:
+        image: "mcr.microsoft.com/mssql/server:2017-latest"
+        environment:
+            SA_PASSWORD: "Pwd12345!"
+            ACCEPT_EULA: "Y"
+            MSSQL_PID: "Express"
+        ports:
+            - "1433:1433"
+
+    web:
+        
+        build: .
+        ports:
+            - "8080:80"
+        image: "dockerkumart/secondtestapi:v1"
+        
