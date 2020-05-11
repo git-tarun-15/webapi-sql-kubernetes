@@ -104,7 +104,7 @@ spec:
       containers:
       - name: secondtestapi-web
         image: dockerkumart/secondtestapi:#{Build.BuildId}#
-        imagePullPolicy: Never
+        imagePullPolicy: Always
         ports:
         - containerPort: 5000
 ---
