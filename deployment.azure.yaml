@@ -22,8 +22,17 @@ spec:
     - ReadWriteOnce
   resources:
     requests:
-      storage: 10Gi
-
+      storage: 10Gi  
+---
+# Set own secret  
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mysecret
+type: Opaque
+data:  
+  password: "Pwd12345!"
+---
 # The deployment encapsulates a pod with SQL Server 2017
 apiVersion: apps/v1
 kind: Deployment
@@ -54,7 +63,10 @@ spec:
         - name: ACCEPT_EULA
           value: "Y"
         - name: SA_PASSWORD
-          value: "Pwd12345!"
+          valueFrom:
+            secretKeyRef:
+              name: mysecret
+              key: password         
         ports:
         - containerPort: 1433
           name: db-server
