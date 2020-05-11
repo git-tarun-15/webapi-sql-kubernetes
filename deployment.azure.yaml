@@ -1,3 +1,14 @@
+# Set own secret  
+kind: Secret
+apiVersion: v1
+metadata:
+  name: mssql-secret
+  namespace: default
+data:
+  # Password is P@ssword1$ so update it with password of your choice  
+  SA_PASSWORD: Pwd12345!
+type: Opaque
+
 ---
 # If we do not mention storage class which means it will take the default one.
 kind: StorageClass
@@ -23,15 +34,6 @@ spec:
   resources:
     requests:
       storage: 10Gi  
----
-# Set own secret  
-apiVersion: v1
-kind: Secret
-metadata:
-  name: mysecret
-type: Opaque
-data:  
-  password: "Pwd12345!"
 ---
 # The deployment encapsulates a pod with SQL Server 2017
 apiVersion: apps/v1
@@ -65,8 +67,8 @@ spec:
         - name: SA_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: mysecret
-              key: password         
+              name: mssql-secret
+              key: SA_PASSWORD         
         ports:
         - containerPort: 1433
           name: db-server
