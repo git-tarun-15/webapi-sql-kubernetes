@@ -1,92 +1,5 @@
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: db-server
-spec:
-  selector:
-    matchLabels:
-      app: db-server
-  replicas: 1
-  template:
-    metadata:
-      labels:
-        app: db-server
-    spec:
-      terminationGracePeriodSeconds: 10
-      containers:
-      - name: db-server
-        image: mcr.microsoft.com/mssql/server:2017-latest
-        resources:
-          limits:
-            cpu: "1"
-            memory: "1Gi"
-          requests:
-            cpu: "0.5"
-        ports:
-        - containerPort: 1433
-        env:
-        - name: ACCEPT_EULA
-          value: "Y"
-        - name: SA_PASSWORD
-          value: "Pwd12345!"
-        volumeMounts:
-        - name: mssql-persistent-storage
-          mountPath: /var/opt/mssql
-      volumes:
-      - name: mssql-persistent-storage
-        persistentVolumeClaim:
-          claimName: mssql-pvc
 ---
-apiVersion: v1
-kind: Service
-metadata:
-  name: db-server
-spec:
-  selector:
-    app: db-server
-  ports:
-    - protocol: TCP
-      port: 1433
-      targetPort: 1433
-      nodePort: 30201
-  type: NodePort
-
----
-apiVersion: apps/v1 # for versions before 1.9.0 use apps/v1beta2 
-kind: Deployment 
-metadata: 
-  name: secondtestapi 
-spec: 
-  selector: 
-    matchLabels: 
-      app: secondtestapi 
-  replicas: 1 # tells deployment to run 2 pods matching the template 
-  template:
-    metadata: 
-      labels: 
-        app: secondtestapi 
-    spec: 
-      containers: 
-      - name: secondtestapi
-        image: dockerkumart/secondtestapi:#{Build.BuildId}#
-        ports: 
-        - containerPort: 80 
---- 
-# https://kubernetes.io/docs/concepts/services-networking/service/#defining-a-service  
-kind: Service 
-apiVersion: v1 
-metadata: 
-  name: secondtestapi 
-spec: 
-  selector: 
-    app: secondtestapi 
-  ports: 
-  - protocol: TCP 
-    port: 80 
-    targetPort: 80 
-  type: LoadBalancer 
-
----
+# If we do not mention storage class which means it will take the default one.
 kind: StorageClass
 apiVersion: storage.k8s.io/v1
 metadata:
@@ -96,6 +9,7 @@ parameters:
   storageaccounttype: Standard_LRS
   kind: Managed
 ---
+# Claim persistent storage from a persistent volume with matching storage class, access mode and space.
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -108,4 +22,103 @@ spec:
     - ReadWriteOnce
   resources:
     requests:
-      storage: 1Gi
+      storage: 10Gi
+
+# The deployment encapsulates a pod with SQL Server 2017
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: secondtestapi-sql
+  labels:
+    app: secondtestapi
+    tier: db-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: secondtestapi
+      tier: db-server
+  template:
+    metadata:
+      labels:
+        app: secondtestapi
+        tier: db-server
+    spec:
+      terminationGracePeriodSeconds: 10
+      containers:
+      - image: mcr.microsoft.com/mssql/server:2017-latest
+        name: secondtestapi-sql
+        env:
+        - name: MSSQL_PID
+          value: "Developer"
+        - name: ACCEPT_EULA
+          value: "Y"
+        - name: SA_PASSWORD
+          value: "Pwd12345!"
+        ports:
+        - containerPort: 1433
+          name: db-server
+        volumeMounts:
+        - name: sql-persistent-storage
+          mountPath: /var/opt/mssql
+      volumes:
+      - name: sql-persistent-storage
+        persistentVolumeClaim:
+          claimName: mssql-pvc
+--- 
+apiVersion: v1
+kind: Service
+metadata:
+  name: db-server
+  labels:
+     app: secondtestapi
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 1433
+    targetPort: 1433
+  selector:
+    app: secondtestapi
+    tier: db-server 
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: secondtestapi-web
+  labels:
+    app: secondtestapi
+    tier: web
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: secondtestapi
+      tier: web
+  template:
+    metadata:
+      labels:
+        app: secondtestapi
+        tier: web
+    spec:
+      containers:
+      - name: secondtestapi-web
+        image: dockerkumart/secondtestapi:#{Build.BuildId}#
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 5000
+---
+# https://kubernetes.io/docs/concepts/services-networking/service/#defining-a-service  
+apiVersion: v1
+kind: Service
+metadata:
+  name: secondtestapi-web
+spec:
+  type: LoadBalancer
+  selector:
+    app: secondtestapi
+    tier: web
+  ports:
+  - name: http
+    port: 5000
+    targetPort: 80
