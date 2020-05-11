@@ -1,20 +1,20 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: mssql-deployment
+  name: db-server
 spec:
   selector:
     matchLabels:
-      app: mssql
+      app: db-server
   replicas: 1
   template:
     metadata:
       labels:
-        app: mssql
+        app: db-server
     spec:
       terminationGracePeriodSeconds: 10
       containers:
-      - name: mssql
+      - name: db-server
         image: mcr.microsoft.com/mssql/server:2017-latest
         resources:
           limits:
